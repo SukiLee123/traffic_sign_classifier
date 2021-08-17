@@ -15,13 +15,53 @@
 # limitations under the License.
 """Script to run generic MobileNet based classification model."""
 import argparse
+import time
 
 from picamera import PiCamera, Color
 
 from aiy.vision import inference
 from aiy.vision.models import utils
+from aiy.leds import Leds 
+from gpiozero import Button 
+from aiy.pins import BUTTON_GPIO_PIN
+from gpiozero import Servo 
+from aiy.pins import PIN_A 
+from aiy.pins import PIN_B
 
+leds = Leds()
+leds.update(Leds.rgb_off())
 
+RED = (0xFF, 0x00, 0x00) 
+GREEN = (0x00, 0xFF, 0x00) 
+BLUE = (0x00, 0x00, 0xFF) 
+YELLOW = (0x00, 0xFF, 0xFF)
+
+tuned_servoA = Servo(PIN_A)
+tuned_servoB = Servo(PIN_B)
+
+def send_signal_to_servos(result 0):
+    if 'backgroud' in result0:
+        tuned_servoA.value = 0.4 
+        tuned_servoB.value = -0.4 
+        leds.update(Leds.rgb_off())
+    elif 'left' in result0: 
+        tuned_servoA.value = -0.6 
+        tuned_servoB.value = -0.6
+        leds.update(Leds.rgb_on(BLUE)
+    elif 'right' in result0: 
+        tuned_servoA.value = 0.6 
+        tuned_servoB.value = 0.6
+        leds.update(Leds.rgb_on(YELLOW))
+    elif 'slow' in result0: 
+        tuned_servoA.value = 0.2 
+        tuned_servoB.value = -0.2
+        leds.update(Leds.rgb_on(GREEN))
+    else:
+        tuned_servoA.value = 0 
+        tuned_servoB.value = 0
+        leds.update(Leds.rgb_on(RED))
+    time.sleep(0.2)
+                    
 def read_labels(label_path):
     with open(label_path) as label_file:
         return [label.strip() for label in label_file.readlines()]
@@ -86,6 +126,7 @@ def main():
             for result in camera_inference.run(args.num_frames):
                 processed_result = process(result, labels, args.output_layer,
                                            args.threshold, args.top_k)
+                send_signal_to_servos(proces sed_result[0])
                 message = get_message(processed_result, args.threshold, args.top_k)
                 if args.show_fps:
                     message += '\nWith %.1f FPS.' % camera_inference.rate
